@@ -3,7 +3,102 @@ import Combine
 
 var subscriptions = Set<AnyCancellable>()
 
-<#Add your code here#>
+example(of: "collect") {
+	["A", "B", "C", "D", "E"].publisher
+		.collect(2)
+		.sink {
+			print("Received completion", $0)
+		} receiveValue: {
+			print("Received value", $0)
+		}.store(in: &subscriptions)
+}
+
+example(of: "map") {
+	let formatter = NumberFormatter()
+	formatter.numberStyle = .spellOut
+	
+	[123, 4, 56].publisher.map {
+		formatter.string(from: NSNumber(integerLiteral: $0))
+	}.sink {
+		print("Received completion", $0)
+	} receiveValue: {
+		print("Received value", $0!)
+	}.store(in: &subscriptions)
+}
+
+example(of: "mapping key paths") {
+	let publisher = PassthroughSubject<Coordinate, Never>()
+	
+	publisher.map(\.x, \.y)
+		.sink {
+			print("The coordinate at (\($0), \($1)) is in quadrant")
+		}.store(in: &subscriptions)
+	
+	publisher.send(Coordinate(x: 10, y: -8))
+	publisher.send(Coordinate(x: 0, y: 5))
+}
+
+example(of: "tryMap") {
+	Just("Directory name that does not exist")
+		.tryMap {
+			try FileManager.default.contentsOfDirectory(atPath: $0)
+		}.sink {
+			print("Received completion", $0)
+		} receiveValue: {
+			print("Received value", $0)
+		}.store(in: &subscriptions)
+}
+
+example(of: "flatMap") {
+	func decode(_ codes: [Int]) -> AnyPublisher<String, Never> {
+		Just(codes.compactMap({ code in
+			guard (32...255).contains(code) else {
+				return nil
+			}
+			return String(UnicodeScalar(code) ?? " ")
+		}).joined())
+		.eraseToAnyPublisher()
+	}
+	
+	[72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33].publisher
+		.collect()
+		.flatMap(decode)
+		.sink {
+			print($0)
+		}.store(in: &subscriptions)
+}
+
+example(of: "replaceNil") {
+	["A", nil, "C"].publisher.eraseToAnyPublisher()
+		.replaceNil(with: "-")
+		.sink { print($0) }
+		.store(in: &subscriptions)
+}
+
+example(of: "replaceEmpty") {
+	let empty = Empty<Int, Never>()
+	
+	empty
+		.replaceEmpty(with: 1).sink {
+		print("Received completion", $0)
+	} receiveValue: {
+		print("Received value", $0)
+	}.store(in: &subscriptions)
+}
+
+example(of: "scan") {
+	var dailyGainLoss: Int { .random(in: -10...10)}
+	
+	let august2019 = (0..<22)
+		.map { _ in
+			dailyGainLoss
+		}.publisher
+	
+	august2019.scan(0) { latest, current in
+		max(0, latest + current)
+	}.sink { _ in }
+		.store(in: &subscriptions)
+}
 
 /// Copyright (c) 2023 Kodeco Inc.
 ///
