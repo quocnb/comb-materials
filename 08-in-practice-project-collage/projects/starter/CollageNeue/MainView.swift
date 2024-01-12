@@ -62,6 +62,7 @@ struct MainView: View {
         
         Button(action: {
           model.add()
+					isDisplayingPhotoPicker = true
         }, label: {
           Text("＋").font(.title)
         })
@@ -70,7 +71,7 @@ struct MainView: View {
       .padding(.bottom)
       .padding(.bottom)
       
-      Image(uiImage: UIImage())
+			Image(uiImage: model.imagePreview ?? UIImage())
         .resizable()
         .frame(height: 200, alignment: .center)
         .border(Color.gray, width: 2)
@@ -97,6 +98,7 @@ struct MainView: View {
     .onChange(of: model.lastSavedPhotoID, perform: { lastSavedPhotoID in
       isDisplayingSavedMessage = true
     })
+		.onReceive(model.updateUISubject, perform: updateUI(photosCount:))
     .alert("Saved photo with id: \(model.lastSavedPhotoID)", isPresented: $isDisplayingSavedMessage, actions: { })
     .alert(lastErrorMessage, isPresented: $isDisplayingErrorMessage, actions: { })
     .sheet(isPresented: $isDisplayingPhotoPicker, onDismiss: {
