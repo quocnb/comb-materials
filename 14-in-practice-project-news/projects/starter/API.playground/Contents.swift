@@ -38,12 +38,62 @@ struct API {
 
   /// A shared JSON decoder to use in calls.
   private let decoder = JSONDecoder()
-  
-  // <#Add your API code here#>
-  
+	
+	/// A custom dispatch queue that run on a background thread to parse JSON
+	private let apiQueue = DispatchQueue(label: "API", qos: .default, attributes: .concurrent)
+
+  // Get Story by Id
+	func story(id: Int) -> AnyPublisher<Story, Error> {
+		URLSession.shared
+			.dataTaskPublisher(for: EndPoint.story(id).url)
+			.receive(on: apiQueue).map(\.data)
+			.decode(type: Story.self, decoder: decoder)
+			.catch { _ in
+				Empty<Story, Error>()
+			}.eraseToAnyPublisher()
+	}
+	
+	/// Multiple stories
+	func mergedStories(ids storyIDs: [Int]) -> AnyPublisher<Story, Error> {
+		let storyIds = Array(storyIDs.prefix(maxStories))
+		
+		precondition(!storyIds.isEmpty)
+		
+		let initialPublisher = story(id: storyIds[0])
+		let remainder = Array(storyIds.dropFirst())
+		
+		return remainder.reduce(initialPublisher) { combine, id in
+			combine.merge(with: story(id: id))
+				.eraseToAnyPublisher()
+		}
+	}
+	
+	/// Latest stories
+	func stories() -> AnyPublisher<[Story], Error> {
+		URLSession.shared.dataTaskPublisher(for: EndPoint.stories.url).map(\.data).decode(type: [Int].self, decoder: decoder).mapError { error in
+			switch error {
+				case is URLError:
+					return Error.addressUnreachable(EndPoint.stories.url)
+				default:
+					return Error.invalidResponse
+			}
+		}.filter { !$0.isEmpty }.flatMap { storyIds in
+			self.mergedStories(ids: storyIds)
+		}.scan([], { stories, story in
+			stories + [story]
+		}).map { $0.sorted() }.eraseToAnyPublisher()
+	}
 }
 
-// <#Call the API here#>
+// Call API
+let api = API()
+var subscriptions = [AnyCancellable]()
+
+api.stories().sink {
+	print("Received completion", $0)
+} receiveValue: {
+	print("Received value", $0)
+}.store(in: &subscriptions)
 
 
 // Run indefinitely.
