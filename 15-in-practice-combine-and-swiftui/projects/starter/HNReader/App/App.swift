@@ -35,11 +35,26 @@ import Combine
 
 @main
 struct HNReader: App {
+	private var subscriptions = Set<AnyCancellable>()
   let viewModel = ReaderViewModel()
+	let userSettings = Settings()
 
+	init() {
+		userSettings.$keywords.map { keywords in
+			keywords.map { keyword in
+				keyword.value
+			}
+		}.assign(to: \.filter, on: viewModel)
+			.store(in: &subscriptions)
+	}
+	
   var body: some Scene {
     WindowGroup {
       ReaderView(model: viewModel)
+				.onAppear(perform: {
+					viewModel.fetchStories()
+				})
+				.environmentObject(userSettings)
     }
   }
 }

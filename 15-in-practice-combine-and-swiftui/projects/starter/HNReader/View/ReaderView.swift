@@ -31,13 +31,20 @@
 /// THE SOFTWARE.
 
 import SwiftUI
+import Combine
 
 struct ReaderView: View {
-  var model: ReaderViewModel
-  var presentingSettingsSheet = false
+	
+	@Environment(\.colorScheme) var colorScheme: ColorScheme
+  @ObservedObject var model: ReaderViewModel
+  @State var presentingSettingsSheet = false
 
-  var currentDate = Date()
-  
+  @State var currentDate = Date()
+	
+	private let timer = Timer.publish(every: 10, on: .main, in: .common)
+		.autoconnect()
+		.eraseToAnyPublisher()
+	
   init(model: ReaderViewModel) {
     self.model = model
   }
@@ -47,7 +54,7 @@ struct ReaderView: View {
     
     return NavigationView {
       List {
-        Section(header: Text(filter).padding(.leading, -10)) {
+				Section(header: Text(self.model.filter.count > 0 ? "Filter: \(self.model.filter.joined(separator: ", "))" : filter).padding(.leading, -10)) {
           ForEach(self.model.stories) { story in
             VStack(alignment: .leading, spacing: 10) {
               TimeBadge(time: story.time)
@@ -62,22 +69,31 @@ struct ReaderView: View {
                 print(story)
               }
               .font(.subheadline)
-              .foregroundColor(Color.blue)
+							.foregroundColor(self.colorScheme == .light ? Color.blue : .orange)
               .padding(.top, 6)
             }
             .padding()
           }
           // Add timer here
+					.onReceive(timer, perform: { time in
+						self.currentDate = time
+					})
         }.padding()
       }
       .listStyle(PlainListStyle())
       // Present the Settings sheet here
+			.sheet(isPresented: $presentingSettingsSheet, content: {
+				SettingsView()
+			})
       // Display errors here
+			.alert(item: $model.error, content: { error in
+				Alert(title: Text("Network Error"), message: Text(error.localizedDescription), dismissButton: .cancel())
+			})
       .navigationBarTitle(Text("\(self.model.stories.count) Stories"))
       .navigationBarItems(trailing:
         Button("Settings") {
           // Set presentingSettingsSheet to true here
-          
+				self.presentingSettingsSheet = true
         }
       )
     }

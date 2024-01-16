@@ -31,9 +31,23 @@
 /// THE SOFTWARE.
 
 import Foundation
+import Combine
 
-final class Settings {
-  init() { }
+final class Settings: ObservableObject {
+  init() {
+		do {
+			try self.keywords = JSONFile.loadValue(named: String(describing: FilterKeyword.self))
+		} catch {
+		}
+	}
   
-  var keywords = [FilterKeyword]()
+	@Published var keywords = [FilterKeyword]() {
+		didSet {
+			do {
+				try JSONFile.save(value: self.keywords, named: String(describing: FilterKeyword.self))
+			} catch {
+				
+			}
+		}
+	}
 }
