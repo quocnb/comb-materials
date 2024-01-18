@@ -4,8 +4,18 @@ import PlaygroundSupport
 
 PlaygroundPage.current.needsIndefiniteExecution = true
 
-<# Add code here #>
+let computationPublisher = Publishers.ExpensiveComputation(duration: 3)
 
+let queue = DispatchQueue(label: "serial queue")
+
+let currentThread = Thread.current.number
+print("Start computation publisher on thread", currentThread)
+
+let subscription = computationPublisher.subscribe(on: queue).receive(on: DispatchQueue.main).sink { _ in
+} receiveValue: { value in
+	let thread = Thread.current.number
+	print("Received computation result on thread \(thread) value \(value)")
+}
 //: [Next](@next)
 /*:
  Copyright (c) 2023 Kodeco Inc.
