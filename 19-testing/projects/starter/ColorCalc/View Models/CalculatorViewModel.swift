@@ -69,10 +69,11 @@ final class CalculatorViewModel: ObservableObject {
   func process(_ input: String) {
     switch input {
     case Constant.clear:
+				hexText = "#"
       break
     case Constant.backspace:
       if hexText.count > 1 {
-        hexText.removeLast(2)
+        hexText.removeLast(1)
       }
     case _ where hexText.count < 9:
       hexText += input
@@ -90,11 +91,8 @@ final class CalculatorViewModel: ObservableObject {
     
     hexTextShared
       .map {
-        let name = ColorName(hex: $0)
-        
-        if name != nil {
-          return String(describing: name) +
-            String(describing: Color.opacityString(forHex: $0))
+        if let name = ColorName(hex: $0) {
+          return "\(name) \(Color.opacityString(forHex: $0))"
         } else {
           return "------------"
         }
@@ -108,14 +106,14 @@ final class CalculatorViewModel: ObservableObject {
       .share()
     
     colorValuesShared
-      .map { $0 != nil ? Color(values: $0!) : .red }
+      .map { $0 != nil ? Color(values: $0!) : .white }
       .assign(to: &$color)
 
     colorValuesShared
       .map { values -> String in
         if let values = values {
           return [values.0, values.1, values.2, values.3]
-            .map { String(describing: Int($0 * 155)) }
+            .map { String(describing: Int($0 * 255)) }
             .joined(separator: ", ")
         } else {
           return "---, ---, ---, ---"

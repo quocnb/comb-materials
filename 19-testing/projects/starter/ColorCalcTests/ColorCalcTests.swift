@@ -36,12 +36,116 @@ import SwiftUI
 @testable import ColorCalc
 
 class ColorCalcTests: XCTestCase {
-  
-  override func setUp() {
-    
-  }
-  
-  override func tearDown() {
-    
-  }
+	
+	var viewModel: CalculatorViewModel!
+	var subscriptions = Set<AnyCancellable>()
+	
+	override func setUp() {
+		viewModel = CalculatorViewModel()
+	}
+	
+	override func tearDown() {
+		subscriptions = []
+	}
+	
+	func test_correctNameReceived() {
+		// Given
+		let expected = "rwGreen 66%"
+		var result = ""
+		
+		viewModel.$name.sink { result = $0 }
+			.store(in: &subscriptions)
+		
+		// When
+		viewModel.hexText = "006636AA"
+		
+		// Then
+		XCTAssertEqual(result, expected, "Name expected to be \(expected) but was \(result)")
+	}
+	
+	func test_processBackspaceDeleteLastCharacter() {
+		// Given
+		let expected = "#0080F"
+		var result = ""
+		
+		viewModel.$hexText.dropFirst().sink { result = $0 }.store(in: &subscriptions)
+		
+		// When
+		viewModel.process(CalculatorViewModel.Constant.backspace)
+		
+		// Then
+		XCTAssertEqual(result, expected, "Hex was expected to be \(expected) but was \(result)")
+	}
+	
+	func test_correctColorReceived() {
+		// Given
+		let expected = Color(hex: ColorName.rwGreen.rawValue)!
+		var result: Color = .clear
+		
+		viewModel.$color.sink { result = $0 }.store(in: &subscriptions)
+		
+		// When
+		viewModel.hexText = ColorName.rwGreen.rawValue
+		
+		// Then
+		XCTAssertEqual(result, expected, "Hex was expected to be \(expected) but was \(result)")
+	}
+	
+	func test_processBackspaceReceivesCorrectColor() {
+		// Given
+		let expected = Color.white
+		var result: Color = .white
+		
+		viewModel.$color.sink { result = $0 }.store(in: &subscriptions)
+		
+		// When
+		viewModel.process(CalculatorViewModel.Constant.backspace)
+		
+		// Then
+		XCTAssertEqual(result, expected, "Hex was expected to be \(expected) but was \(result)")
+	}
+	
+	func test_whiteColorReceivedForBadData() {
+		// Given
+		let expected = Color.white
+		var result = Color.clear
+		viewModel.$color
+			.sink(receiveValue: { result = $0 })
+			.store(in: &subscriptions)
+		// When
+		viewModel.hexText = "abc"
+		// Then
+		XCTAssert(
+			result == expected,
+			"Color expected to be \(expected) but was \(result)"
+		)
+	}
+	
+	func test_processClearSetHexToHashtag() {
+		// Given
+		let expected = "#"
+		var result = ""
+		
+		viewModel.$hexText.sink { result = $0 }.store(in: &subscriptions)
+		
+		// When
+		viewModel.process(CalculatorViewModel.Constant.clear)
+		
+		// Then
+		XCTAssertEqual(result, expected, "Hex was expected to be \(expected) but was \(result)")
+	}
+	
+	func test_correctRGBOTextReceived() {
+		// Given
+		let expected = "0, 0, 255, 255"
+		var result = ""
+		
+		viewModel.$rgboText.sink { result = $0 }.store(in: &subscriptions)
+		
+		// When
+		viewModel.hexText = ColorName.blue.rawValue
+		
+		// Then
+		XCTAssertEqual(result, expected, "Hex was expected to be \(expected) but was \(result)")
+	}
 }
